@@ -1,0 +1,160 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  username      String?   @unique
+  avatar        String?
+  bio           String?
+  website       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  brandProfiles     BrandProfile[]
+  content          Content[]
+  analytics        Analytics[]
+  apiKeys          ApiKey[]
+  subscriptions    Subscription[]
+  
+  @@map("users")
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  key         String    @unique
+  lastUsed    DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("api_keys")
+}
+
+// ============================================
+// BRAND PROFILE
+// ============================================
+
+model BrandProfile {
+  id              String    @id @default(cuid())
+  userId          String
+  brandName       String
+  brandVoice      String?
+  targetAudience  String?
+  brandValues     String?
+  visualIdentity  Json?
+  positioning     String?
+  keywords        String[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("brand_profiles")
+}
+
+// ============================================
+// CONTENT
+// ============================================
+
+model Content {
+  id            String          @id @default(cuid())
+  userId        String
+  title         String
+  slug          String          @unique
+  contentType   ContentTypes
+  status        ContentStatus   @default(DRAFT)
+  content       String?
+  excerpt       String?
+  featuredImage  String?
+  seo           Json?
+  publishedAt   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("content")
+}
+
+enum ContentTypes {
+  ARTICLE
+  SOCIAL_POST
+  NEWSLETTER
+  VIDEO_SCRIPT
+  PODCAST_SCRIPT
+  EMAIL_SEQUENCE
+}
+
+enum ContentStatus {
+  DRAFT
+  REVIEW
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+model Analytics {
+  id            String      @id @default(cuid())
+  userId        String
+  date          DateTime
+  metricType    String
+  value         Float
+  metadata      Json?
+  createdAt     DateTime    @default(now())
+  
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, date])
+  @@map("analytics")
+}
+
+// ============================================
+// SUBSCRIPTION
+// ============================================
+
+model Subscription {
+  id              String            @id @default(cuid())
+  userId          String
+  status          SubscriptionStatus @default(ACTIVE)
+  plan            String
+  stripeCustomerId String?
+  stripeSubscriptionId String? @unique
+  currentPeriodEnd DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
+  TRIALING
+}
