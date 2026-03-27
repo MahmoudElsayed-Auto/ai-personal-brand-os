@@ -16,6 +16,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@headlessui/react": "^2.0.4",
     "@prisma/client": "^5.22.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",

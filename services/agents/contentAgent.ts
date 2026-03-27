@@ -1,12 +1,4 @@
-/**
- * Content Writer Agent
- * 
- * Input: topic string
- * Output: Structured content (title, hooks, script, CTA)
- * 
- * NOTE: Currently uses placeholder functions.
- * TODO: Integrate with Gemini API
- */
+import { generateContent } from '../ai/gemini';
 
 export interface ContentOutput {
   title: string;
@@ -23,8 +15,8 @@ export interface GenerateScriptOptions {
 }
 
 /**
- * Placeholder function for generating script
- * TODO: Replace with actual Gemini API call
+ * Generate script using Gemini AI
+ * Returns structured content: title, hooks, script, CTA
  * 
  * @param topic - The topic to generate content about
  * @param options - Optional configuration for platform, tone, etc.
@@ -34,17 +26,195 @@ export async function generateScript(
   topic: string,
   options?: GenerateScriptOptions
 ): Promise<ContentOutput> {
-  // TODO: Integrate with Gemini API
-  // const geminiResponse = await callGeminiAPI(topic, options);
-  // return geminiResponse;
+  const platform = options?.platform || 'youtube';
+  const tone = options?.tone || 'professional';
 
-  // Placeholder implementation for now
-  return await placeholderGenerator(topic, options);
+  // Create prompt for Gemini
+  const prompt = createPrompt(topic, platform, tone);
+
+  try {
+    // Call Gemini API
+    const response = await generateContent(prompt, {
+      temperature: 0.8,
+      maxOutputTokens: 4096,
+    });
+
+    if (!response.success || !response.text) {
+      console.warn('Gemini API failed, falling back to placeholder');
+      return await placeholderGenerator(topic, options);
+    }
+
+    // Parse Gemini response
+    const content = parseGeminiResponse(response.text, topic);
+    
+    return {
+      ...content,
+      platform,
+    };
+  } catch (error) {
+    console.error('Error generating content with Gemini:', error);
+    // Fallback to placeholder on error
+    return await placeholderGenerator(topic, options);
+  }
+}
+
+/**
+ * Create prompt for Gemini API
+ * Instructs to generate Arabic content creator style content
+ */
+function createPrompt(topic: string, platform: string, tone: string): string {
+  const languageInstruction = 'Generate all content in Professional Arabic (اللغة العربية الفصحى).';
+  
+  const platformInstructions: Record<string, string> = {
+    youtube: `
+- Long-form content (5-10 minutes)
+- Strong opening hook
+- Detailed sections with examples
+- Professional presentation style
+- Clear structure: intro, main content, conclusion
+- Include timestamps and sections`,
+    
+    tiktok: `
+- Short-form content (15-60 seconds)
+- Maximum impact in minimum time
+- Trending style hooks
+- Quick transitions
+- Viral potential focus
+- Add relevant emojis`,
+    
+    instagram: `
+- Medium-length content (1-3 minutes for Reels)
+- Visually-driven language
+- Story-telling approach
+- Engagement-focused hooks
+- Include carousel structure if applicable
+- Add relevant hashtags`,
+    
+    twitter: `
+- Thread format (5-10 tweets)
+- Concise, punchy statements
+- Key insights only
+- Thread structure with numbers
+- Retweet-worthy takeaways
+- Include relevant hashtags`,
+    
+    linkedin: `
+- Professional tone
+- Industry insights focus
+- Business-oriented language
+- Thought leadership style
+- Call-to-action for engagement
+- Include statistics and data if relevant`
+  };
+
+  const prompt = `You are an expert Arabic content creator specializing in ${platform} content creation. Your task is to create engaging, viral-worthy content in Arabic.
+
+Topic: ${topic}
+Platform: ${platform}
+Tone: ${tone}
+
+${languageInstruction}
+
+Platform-specific requirements:
+${platformInstructions[platform]}
+
+Generate a JSON response with this exact structure:
+{
+  "title": "Engaging title in Arabic that grabs attention",
+  "hooks": [
+    "First hook in Arabic - emotional or curiosity-driven",
+    "Second hook in Arabic - value proposition",
+    "Third hook in Arabic - urgency or FOMO"
+  ],
+  "script": "Complete script in Arabic. Include:
+    - Opening hook
+    - Main content sections
+    - Examples and stories
+    - Key takeaways
+    - Closing
+    
+    Format with clear sections using emojis and line breaks.",
+  "cta": "Clear call-to-action in Arabic that drives engagement"
+}
+
+IMPORTANT RULES:
+1. All content MUST be in Arabic
+2. Use engaging, conversational Arabic
+3. Include relevant emojis where appropriate
+4. Make it platform-optimized
+5. Ensure viral potential
+6. Be authentic and relatable
+7. Provide real value to the audience
+
+Return ONLY valid JSON, no markdown formatting or additional text.`;
+
+  return prompt;
+}
+
+/**
+ * Parse Gemini response into structured content
+ * Handles various response formats and ensures valid output
+ */
+function parseGeminiResponse(responseText: string, topic: string): Omit<ContentOutput, 'platform'> {
+  try {
+    // Try to extract JSON from the response
+    // Sometimes Gemini wraps JSON in markdown code blocks
+    let jsonStr = responseText;
+    
+    // Remove markdown code blocks if present
+    const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1].trim();
+    }
+    
+    // Try to parse as JSON
+    const parsed = JSON.parse(jsonStr);
+    
+    // Validate parsed content has required fields
+    if (
+      typeof parsed.title === 'string' &&
+      Array.isArray(parsed.hooks) &&
+      typeof parsed.script === 'string' &&
+      typeof parsed.cta === 'string'
+    ) {
+      return {
+        title: parsed.title,
+        hooks: parsed.hooks.slice(0, 3), // Ensure max 3 hooks
+        script: parsed.script,
+        cta: parsed.cta,
+      };
+    }
+    
+    throw new Error('Invalid response structure');
+  } catch (error) {
+    console.error('Failed to parse Gemini response:', error);
+    
+    // Return fallback content
+    return {
+      title: `محتوى حصري عن ${topic}`,
+      hooks: [
+        `هل تعلم أن ${topic} يمكن أن يغير حياتك؟`,
+        `في الـ60 ثانية القادمة، ستتعلم كل شيء عن ${topic}`,
+        `سر ${topic} الذي لن تجده في مكان آخر`
+      ],
+      script: `مرحباً! في هذا المحتوى، سنتعلم كل شيء عن ${topic}.
+
+${topic} هو موضوع مهم جداً ويؤثر على حياتنا اليومية.
+
+في هذا المحتوى سنغطي:
+- ما هو ${topic} ولماذا هو مهم
+- كيف يمكنك الاستفادة من ${topic}
+- نصائح عملية للتطبيق
+
+هيا نبدأ!`,
+      cta: `لا تنسى الاشتراك وتفعيل notifications للمزيد من المحتوى القيم!`
+    };
+  }
 }
 
 /**
  * Placeholder generator for development/testing
- * Returns mock structured content
+ * Returns mock structured content (fallback)
  */
 async function placeholderGenerator(
   topic: string,
@@ -273,25 +443,6 @@ function generateCTA(platform: string): string {
   
   return ctas[platform] || ctas.youtube;
 }
-
-/**
- * Future: Gemini API integration function
- * When ready to integrate, uncomment and implement:
- */
-// async function callGeminiAPI(
-//   topic: string,
-//   options?: GenerateScriptOptions
-// ): Promise<ContentOutput> {
-//   const response = await fetch('/api/gemini/generate', {
-//     method: 'POST',
-//     headers: { 'Content-Type': 'application/json' },
-//     body: JSON.stringify({ topic, ...options })
-//   });
-//   
-//   if (!response.ok) throw new Error('Gemini API call failed');
-//   
-//   return await response.json();
-// }
 
 export default {
   generateScript
