@@ -23,8 +23,11 @@ import { Button } from '@/components/ui/button';
 interface GeneratedScript {
   id: string;
   topic: string;
-  platform: 'youtube' | 'instagram' | 'twitter' | 'linkedin';
-  content: string;
+  platform: 'youtube' | 'instagram' | 'twitter' | 'tiktok' | 'linkedin';
+  title: string;
+  hooks: string[];
+  script: string;
+  cta: string;
   createdAt: Date;
 }
 
@@ -48,7 +51,7 @@ export default function ScriptsPage() {
     
     setIsGenerating(true);
     try {
-      const response = await fetch('/api/scripts/generate', {
+      const response = await fetch('/api/agents/content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, platform }),
@@ -59,168 +62,31 @@ export default function ScriptsPage() {
         id: Date.now().toString(),
         topic,
         platform,
-        content: data.content || generateMockScript(topic, platform),
+        title: data.title || `Script for ${topic}`,
+        hooks: data.hooks || [],
+        script: data.script || '',
+        cta: data.cta || '',
         createdAt: new Date(),
       });
     } catch (error) {
-      // Use mock data if API fails
-      setGeneratedScript({
-        id: Date.now().toString(),
-        topic,
-        platform,
-        content: generateMockScript(topic, platform),
-        createdAt: new Date(),
-      });
+      console.error('Error generating script:', error);
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const generateMockScript = (topic: string, platform: string) => {
-    const templates: Record<string, string> = {
-      youtube: `🎬 YouTube Script: ${topic}
-
-📌 HOOK (0-15 seconds)
-"Most people get ${topic} completely wrong. Here's what they don't tell you..."
-
-📖 INTRO (15-45 seconds)
-Brief introduction to the topic and why it matters. Share a surprising statistic or personal story to build credibility.
-
-🎯 MAIN CONTENT (3-5 minutes)
-Point 1: The biggest misconception about ${topic}
-- Explain the common mistake
-- Provide evidence/examples
-- Show the correct approach
-
-Point 2: Practical steps to get started
-- Step-by-step breakdown
-- Tools and resources mentioned
-- Common pitfalls to avoid
-
-Point 3: Advanced strategies
-- Pro tips and techniques
-- Real-world case studies
-- Actionable frameworks
-
-💡 CALL TO ACTION
-"Subscribe for more content like this and drop a comment with your biggest ${topic} challenge!"
-
-#Ending: "This is [Your Name], and I'll see you in the next one."`,
-
-      instagram: `📸 Instagram Carousel: ${topic}
-
-Slide 1 (Cover):
-${topic.toUpperCase()}:
-The Complete Guide
-[Eye-catching image]
-
-Slide 2:
-❌ What Most People Think
-${topic} is complicated
-${topic} requires X
-${topic} takes years to master
-
-Slide 3:
-✅ The Truth
-${topic} can be simple
-${topic} needs only X
-${topic} starts today
-
-Slide 4:
-🔧 Step 1: Foundation
-[3 quick bullet points about getting started]
-
-Slide 5:
-⚡ Step 2: Momentum
-[3 tips for building consistency]
-
-Slide 6:
-🚀 Step 3: Scale
-[How to take it to the next level]
-
-Caption:
-Want to master ${topic}? Here's everything you need to know... 
-
-Save this post for later! 📌
-
-#${topic.replace(/\s+/g, '')} #growth #tips`,
-
-      twitter: `🐦 Twitter Thread: ${topic}
-
-1/ Here's everything I learned about ${topic} after 5 years in the field: 
-
-A thread 🧵👇
-
-2/ Most people overcomplicate ${topic}
-
-The truth? You only need to focus on 3 things:
-
-3/ First: [Key principle #1]
-- Why it matters
-- How to apply it
-- Common mistakes
-
-4/ Second: [Key principle #2]
-- The framework I use
-- Tools that help
-- Real results
-
-5/ Third: [Key principle #3]
-- The secret sauce
-- My personal strategy
-- What I wish I knew earlier
-
-6/ If you want to master ${topic}, start here:
-[Specific action step]
-
-7/ What's your biggest ${topic} challenge?
-
-Reply below and I'll personally help you out.
-
-Retweet the first tweet if this was helpful 🔁`,
-
-      linkedin: `💼 LinkedIn Article Framework: ${topic}
-
-HEADLINE:
-${topic}: A Practical Guide for Professionals
-
-OPENING:
-"After 10 years in the industry, here's what nobody tells you about ${topic}..."
-
-KEY SECTION 1: The Current Landscape
-[Industry context + statistics]
-
-KEY SECTION 2: Common Challenges
-[3 pain points your audience faces]
-
-KEY SECTION 3: Solutions That Work
-[Actionable strategies with examples]
-
-KEY SECTION 4: Getting Started
-[Step-by-step implementation guide]
-
-KEY SECTION 5: Future Outlook
-[Where the industry is heading]
-
-CLOSING:
-What's your experience with ${topic}? Share your thoughts in the comments.
-
-#hashtag1 #hashtag2 #hashtag3`,
-    };
-
-    return templates[platform] || templates.youtube;
-  };
-
   const handleCopy = async () => {
     if (!generatedScript) return;
-    await navigator.clipboard.writeText(generatedScript.content);
+    const contentToCopy = `Title: ${generatedScript.title}\n\nHooks:\n${generatedScript.hooks.map((h, i) => `${i + 1}. ${h}`).join('\n')}\n\nScript:\n${generatedScript.script}\n\nCTA: ${generatedScript.cta}`;
+    await navigator.clipboard.writeText(contentToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownload = () => {
     if (!generatedScript) return;
-    const blob = new Blob([generatedScript.content], { type: 'text/plain' });
+    const contentToDownload = `Title: ${generatedScript.title}\n\nHooks:\n${generatedScript.hooks.map((h, i) => `${i + 1}. ${h}`).join('\n')}\n\nScript:\n${generatedScript.script}\n\nCTA: ${generatedScript.cta}`;
+    const blob = new Blob([contentToDownload], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -391,10 +257,34 @@ What's your experience with ${topic}? Share your thoughts in the comments.
               </div>
             </div>
             
-            <div className="prose dark:prose-invert max-w-none">
-              <pre className="whitespace-pre-wrap font-mono text-sm bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto border border-gray-200 dark:border-gray-700">
-                {generatedScript.content}
-              </pre>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-sm text-gray-500 dark:text-gray-400 mb-2">Title</h4>
+                <p className="text-lg font-medium">{generatedScript.title}</p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-sm text-gray-500 dark:text-gray-400 mb-2">Hooks</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  {generatedScript.hooks.map((hook, idx) => (
+                    <li key={idx} className="text-gray-700 dark:text-gray-300">{hook}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-sm text-gray-500 dark:text-gray-400 mb-2">Script</h4>
+                <div className="prose dark:prose-invert max-w-none">
+                  <pre className="whitespace-pre-wrap font-mono text-sm bg-gray-50 dark:bg-gray-900 p-4 rounded-lg overflow-auto border border-gray-200 dark:border-gray-700">
+                    {generatedScript.script}
+                  </pre>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-sm text-gray-500 dark:text-gray-400 mb-2">Call-to-Action</h4>
+                <p className="font-medium text-blue-600 dark:text-blue-400">{generatedScript.cta}</p>
+              </div>
             </div>
           </motion.div>
         )}
