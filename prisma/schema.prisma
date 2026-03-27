@@ -6,12 +6,101 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // ============================================
-// USER & AUTHENTICATION
+// ENUMS
+// ============================================
+
+enum UserRole {
+  ADMIN
+  USER
+  EDITOR
+  VIEWER
+}
+
+enum Platform {
+  YOUTUBE
+  TIKTOK
+  INSTAGRAM
+  TWITTER
+  LINKEDIN
+  FACEBOOK
+  TWITCH
+  PODCAST
+  BLOG
+  NEWSLETTER
+}
+
+enum ContentType {
+  TUTORIAL
+  SHORT
+  POST
+  VIDEO
+  ARTICLE
+  PODCAST
+  LIVE_STREAM
+}
+
+enum ContentStatus {
+  IDEA
+  SCRIPT
+  READY
+  PUBLISHED
+  ARCHIVED
+  DRAFT
+  REVIEW
+  SCHEDULED
+}
+
+enum AgentType {
+  CONTENT_WRITER
+  SEO_SPECIALIST
+  VIDEO_EDITOR
+  GRAPHIC_DESIGNER
+  SOCIAL_MEDIA_MANAGER
+  COPYWRITER
+  THUMBNAIL_DESIGNER
+  SCRIPT_WRITER
+  TREND_ANALYST
+  ENGAGEMENT_OPTIMIZER
+}
+
+enum AgentTaskStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum ScheduleStatus {
+  SCHEDULED
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+enum JobStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum ProposalStatus {
+  DRAFT
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+// ============================================
+// USER MODEL
 // ============================================
 
 model User {
@@ -19,6 +108,7 @@ model User {
   email         String    @unique
   name          String?
   username      String?   @unique
+  role          UserRole  @default(USER)
   avatar        String?
   bio           String?
   website       String?
@@ -26,12 +116,16 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  brandProfiles     BrandProfile[]
-  content          Content[]
-  analytics        Analytics[]
-  apiKeys          ApiKey[]
-  subscriptions    Subscription[]
-  
+  brandProfiles   BrandProfile[]
+  contents        Content[]
+  agentTasks      AgentTask[]
+  proposals       Proposal[]
+  analytics      Analytics[]
+  apiKeys        ApiKey[]
+  subscriptions  Subscription[]
+
+  @@index([email])
+  @@index([role])
   @@map("users")
 }
 
@@ -43,9 +137,10 @@ model ApiKey {
   lastUsed    DateTime?
   expiresAt   DateTime?
   createdAt   DateTime  @default(now())
-  
+
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  @@index([userId])
   @@map("api_keys")
 }
 
@@ -65,14 +160,15 @@ model BrandProfile {
   keywords        String[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  
+
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  @@index([userId])
   @@map("brand_profiles")
 }
 
 // ============================================
-// CONTENT
+// CONTENT MODEL
 // ============================================
 
 model Content {
@@ -80,40 +176,151 @@ model Content {
   userId        String
   title         String
   slug          String          @unique
-  contentType   ContentTypes
-  status        ContentStatus   @default(DRAFT)
-  content       String?
+  description   String?
+  platform      Platform
+  type          ContentType
+  status        ContentStatus   @default(IDEA)
+  publishDate   DateTime?
   excerpt       String?
-  featuredImage  String?
+  featuredImage String?
   seo           Json?
-  publishedAt   DateTime?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
-  
+
+  // Relations
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  scripts       Script[]
+  schedules     Schedule[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([platform])
+  @@index([publishDate])
   @@map("content")
 }
 
-enum ContentTypes {
-  ARTICLE
-  SOCIAL_POST
-  NEWSLETTER
-  VIDEO_SCRIPT
-  PODCAST_SCRIPT
-  EMAIL_SEQUENCE
-}
+// ============================================
+// SCRIPT MODEL
+// ============================================
 
-enum ContentStatus {
-  DRAFT
-  REVIEW
-  SCHEDULED
-  PUBLISHED
-  ARCHIVED
+model Script {
+  id            String    @id @default(cuid())
+  contentId     String
+  scriptText    String    @db.Text
+  hooks         String[]
+  cta           String?
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  content       Content   @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@map("scripts")
 }
 
 // ============================================
-// ANALYTICS
+// SCHEDULE MODEL
+// ============================================
+
+model Schedule {
+  id            String          @id @default(cuid())
+  contentId     String
+  platform      Platform
+  scheduledAt   DateTime
+  status        ScheduleStatus  @default(SCHEDULED)
+  publishedUrl   String?
+  metadata      Json?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  content       Content         @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("schedules")
+}
+
+// ============================================
+// AGENT TASK MODEL
+// ============================================
+
+model AgentTask {
+  id            String            @id @default(cuid())
+  userId        String?
+  agentType     AgentType
+  input         String            @db.Text
+  output        String?            @db.Text
+  status        AgentTaskStatus   @default(PENDING)
+  metadata      Json?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  // Relations
+  user          User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([agentType])
+  @@index([status])
+  @@index([userId])
+  @@map("agent_tasks")
+}
+
+// ============================================
+// FREELANCE JOB MODEL
+// ============================================
+
+model FreelanceJob {
+  id            String      @id @default(cuid())
+  platform      String
+  title         String
+  description   String      @db.Text
+  url           String
+  budget        String?
+  status        JobStatus   @default(OPEN)
+  deadline      DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  proposals      Proposal[]
+
+  @@index([platform])
+  @@index([status])
+  @@index([createdAt])
+  @@map("freelance_jobs")
+}
+
+// ============================================
+// PROPOSAL MODEL
+// ============================================
+
+model Proposal {
+  id            String          @id @default(cuid())
+  jobId         String
+  userId        String?
+  content       String          @db.Text
+  status        ProposalStatus  @default(DRAFT)
+  metadata      Json?
+  submittedAt   DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  job           FreelanceJob    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user          User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([jobId])
+  @@index([status])
+  @@map("proposals")
+}
+
+// ============================================
+// ANALYTICS MODEL
 // ============================================
 
 model Analytics {
@@ -124,30 +331,33 @@ model Analytics {
   value         Float
   metadata      Json?
   createdAt     DateTime    @default(now())
-  
+
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId, date])
+  @@index([metricType])
   @@map("analytics")
 }
 
 // ============================================
-// SUBSCRIPTION
+// SUBSCRIPTION MODEL
 // ============================================
 
 model Subscription {
-  id              String            @id @default(cuid())
-  userId          String
-  status          SubscriptionStatus @default(ACTIVE)
-  plan            String
-  stripeCustomerId String?
-  stripeSubscriptionId String? @unique
-  currentPeriodEnd DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id                String              @id @default(cuid())
+  userId            String
+  status            SubscriptionStatus  @default(ACTIVE)
+  plan              String
+  stripeCustomerId  String?
+  stripeSubscriptionId String?           @unique
+  currentPeriodEnd  DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
   @@map("subscriptions")
 }
 
