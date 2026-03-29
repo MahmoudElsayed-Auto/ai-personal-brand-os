@@ -1,0 +1,11 @@
+
+> ai-personal-brand-os@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 1706ms
+ ✓ Compiled /middleware in 144ms (193 modules)

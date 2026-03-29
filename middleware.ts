@@ -1,42 +1,58 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  // Protected routes
-  const protectedPaths = ['/dashboard']
-  const isProtectedPath = protectedPaths.some(path => 
-    req.nextUrl.pathname.startsWith(path)
-  )
+  const isProtectedPath = ['/dashboard'].some((path) => request.nextUrl.pathname.startsWith(path))
 
-  if (isProtectedPath && !session) {
-    return NextResponse.redirect(new URL('/auth/login', req.url))
+  if (isProtectedPath && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/login'
+    return NextResponse.redirect(url)
   }
 
-  // Auth routes - redirect to dashboard if already logged in
-  const authPaths = ['/auth/login', '/auth/signup']
-  const isAuthPath = authPaths.some(path => 
-    req.nextUrl.pathname === path
+  const isAuthPath = ['/auth/login', '/auth/signup'].some(
+    (path) => request.nextUrl.pathname === path
   )
 
-  if (isAuthPath && session) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
+  if (isAuthPath && user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
   }
 
-  return res
+  return supabaseResponse
 }
 
 export const config = {
-  matcher: [
-    '/dashboard/:path*',
-    '/auth/login',
-    '/auth/signup',
-  ],
+  matcher: ['/dashboard/:path*', '/auth/login', '/auth/signup'],
 }

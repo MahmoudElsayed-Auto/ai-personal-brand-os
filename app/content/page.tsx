@@ -1,82 +1,76 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Search, Filter, MoreVertical, Calendar, Clock, Edit2, Trash2 } from 'lucide-react'
 import { DataTable } from '@/components/ui/DataTable'
 import { Modal } from '@/components/ui/Modal'
 
-const dummyContent = [
-  {
-    id: 1,
-    title: '10 Tips for Growing Your Personal Brand',
-    platform: 'Twitter',
-    status: 'Scheduled',
-    scheduled: '2024-01-15 14:00',
-    engagement: 245,
-    author: 'AI Assistant',
-  },
-  {
-    id: 2,
-    title: 'How to Build Authority on LinkedIn',
-    platform: 'LinkedIn',
-    status: 'Published',
-    scheduled: '2024-01-14 09:00',
-    engagement: 1892,
-    author: 'AI Assistant',
-  },
-  {
-    id: 3,
-    title: 'The Future of AI in Content Creation',
-    platform: 'Blog',
-    status: 'Draft',
-    scheduled: '-',
-    engagement: 0,
-    author: 'User',
-  },
-  {
-    id: 4,
-    title: 'Script: Productivity Hacks for Entrepreneurs',
-    platform: 'Script',
-    status: 'Draft',
-    scheduled: '-',
-    engagement: 0,
-    author: 'AI Assistant',
-  },
-  {
-    id: 5,
-    title: '5 Mistakes to Avoid When Building Influence',
-    platform: 'Twitter',
-    status: 'Published',
-    scheduled: '2024-01-13 16:30',
-    engagement: 512,
-    author: 'AI Assistant',
-  },
-]
-
 const columns = [
   { key: 'title', header: 'Title', sortable: true },
   { key: 'platform', header: 'Platform', sortable: true },
   { key: 'status', header: 'Status', sortable: true },
-  { key: 'scheduled', header: 'Scheduled', sortable: true },
+  { key: 'scheduledAt', header: 'Scheduled', sortable: true },
   { key: 'engagement', header: 'Engagement', sortable: true },
-  { key: 'author', header: 'Author', sortable: true },
 ] as const
 
 export default function ContentPlannerPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [contentList, setContentList] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const filteredContent = dummyContent.filter((item) => {
+  const fetchContent = async () => {
+    try {
+      const res = await fetch('/api/content')
+      if (res.ok) {
+        const data = await res.json()
+        setContentList(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch content:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchContent()
+  }, [])
+
+  const filteredContent = contentList.filter((item) => {
     const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = statusFilter === 'all' || item.status.toLowerCase() === statusFilter
     return matchesSearch && matchesStatus
   })
 
   const handleCreateContent = async (data: Record<string, unknown>) => {
-    console.log('Creating content:', data)
-    // TODO: Call API endpoint
+    try {
+      const res = await fetch('/api/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title,
+          platform: String(data.platform).toUpperCase(),
+          type: 'POST', // Default fallback
+          description: data.content,
+          status: String(data.status).toUpperCase(),
+          slug:
+            String(data.title)
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-') +
+            '-' +
+            Date.now(),
+        }),
+      })
+      if (res.ok) {
+        fetchContent()
+        setIsModalOpen(false)
+      }
+    } catch (err) {
+      console.error('Failed to create content:', err)
+    }
   }
 
   return (
@@ -88,9 +82,7 @@ export default function ContentPlannerPage() {
     >
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Content Planner
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Content Planner</h1>
           <p className="text-sm text-slate-600 dark:text-slate-400">
             manage all your content in one place
           </p>
@@ -135,23 +127,30 @@ export default function ContentPlannerPage() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1 }}
       >
-        <DataTable
-          data={filteredContent}
-          columns={columns}
-          onRowClick={(row) => console.log('Row clicked:', row)}
-        />
+        {loading ? (
+          <div className="p-8 text-center text-slate-500">Loading content...</div>
+        ) : (
+          <DataTable
+            data={filteredContent}
+            columns={columns}
+            onRowClick={(row) => console.log('Row clicked:', row)}
+          />
+        )}
       </motion.div>
 
       <AnimatePresence>
         {isModalOpen && (
-          <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create New Content">
+          <Modal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            title="Create New Content"
+          >
             <form
               onSubmit={(e) => {
                 e.preventDefault()
                 const formData = new FormData(e.currentTarget)
                 const data = Object.fromEntries(formData)
                 handleCreateContent(data)
-                setIsModalOpen(false)
               }}
               className="space-y-4"
             >
@@ -176,10 +175,10 @@ export default function ContentPlannerPage() {
                   required
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                 >
-                  <option value="twitter">Twitter</option>
-                  <option value="linkedin">LinkedIn</option>
-                  <option value="blog">Blog</option>
-                  <option value="script">Script</option>
+                  <option value="TWITTER">Twitter</option>
+                  <option value="LINKEDIN">LinkedIn</option>
+                  <option value="BLOG">Blog</option>
+                  <option value="NEWSLETTER">Newsletter</option>
                 </select>
               </div>
 
@@ -189,12 +188,13 @@ export default function ContentPlannerPage() {
                 </label>
                 <select
                   name="status"
-                  defaultValue="draft"
+                  defaultValue="DRAFT"
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                 >
-                  <option value="draft">Draft</option>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="published">Published</option>
+                  <option value="IDEA">Idea</option>
+                  <option value="DRAFT">Draft</option>
+                  <option value="SCHEDULED">Scheduled</option>
+                  <option value="PUBLISHED">Published</option>
                 </select>
               </div>
 
