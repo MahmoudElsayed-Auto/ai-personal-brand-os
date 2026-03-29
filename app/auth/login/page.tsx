@@ -23,7 +23,14 @@ export default function LoginPage() {
 
       console.log('Login successful, redirecting')
 
-      router.push('/dashboard')
+      // Use router.replace to avoid back button issues,
+      // followed by a hard refresh fallback if needed.
+      router.replace('/dashboard')
+
+      // Fallback: If SPA navigation fails to redirect
+      setTimeout(() => {
+        window.location.href = '/dashboard'
+      }, 1000)
     } catch (error) {
       console.error('Login error:', error)
       setError(error instanceof Error ? error.message : 'Failed to login')
