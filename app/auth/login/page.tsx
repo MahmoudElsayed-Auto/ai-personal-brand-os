@@ -15,25 +15,18 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
 
-    console.log('Login attempt started')
+    console.log('Form prevented successfully')
 
     try {
       await authService.signIn(email, password)
+      console.log('Login successful')
 
-      console.log('Login successful, redirecting')
-
-      // Use router.replace to avoid back button issues,
-      // followed by a hard refresh fallback if needed.
-      router.replace('/dashboard')
-
-      // Fallback: If SPA navigation fails to redirect
-      setTimeout(() => {
-        window.location.href = '/dashboard'
-      }, 1000)
-    } catch (error) {
-      console.error('Login error:', error)
-      setError(error instanceof Error ? error.message : 'Failed to login')
+      window.location.assign('/dashboard')
+    } catch (err) {
+      console.error(err)
+      setError(err instanceof Error ? err.message : 'Failed to login')
     }
   }
 
