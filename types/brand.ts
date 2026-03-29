@@ -1,39 +1,33 @@
 export interface BrandProfile {
   id: string
-  name: string
-  slug: string
   userId: string
-  website: string | null
-  description: string | null
-  logo: string | null
-  primaryColor: string | null
-  secondaryColor: string | null
+  brandName: string
+  brandVoice: string | null
+  targetAudience: string | null
+  brandValues: string | null
+  visualIdentity: any // Json
+  positioning: string | null
+  keywords: string[]
   createdAt: Date
   updatedAt: Date
 }
 
 export interface CreateBrandProfileRequest {
-  name: string
-  website?: string
-  description?: string
-  logo?: string
-  primaryColor?: string
-  secondaryColor?: string
+  brandName: string
+  brandVoice?: string
+  targetAudience?: string
+  brandValues?: string
+  visualIdentity?: any
+  positioning?: string
+  keywords?: string[]
 }
 
 export interface UpdateBrandProfileRequest {
-  name?: string
-  website?: string
-  description?: string
-  logo?: string
-  primaryColor?: string
-  secondaryColor?: string
-}
-
-export interface BrandVoice {
-  tone: string
-  style: string
-  keywords: string[]
-  avoidKeywords: string[]
-  targetAudience: string
+  brandName?: string
+  brandVoice?: string
+  targetAudience?: string
+  brandValues?: string
+  visualIdentity?: any
+  positioning?: string
+  keywords?: string[]
 }

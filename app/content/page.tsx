@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Search, Filter, MoreVertical, Calendar, Clock, Edit2, Trash2 } from 'lucide-react'
-import DataTable from '@/components/ui/DataTable'
-import Modal from '@/components/ui/Modal'
+import { DataTable } from '@/components/ui/DataTable'
+import { Modal } from '@/components/ui/Modal'
 
 const dummyContent = [
   {
@@ -55,13 +55,13 @@ const dummyContent = [
 ]
 
 const columns = [
-  { key: 'title', label: 'Title', sortable: true },
-  { key: 'platform', label: 'Platform', sortable: true },
-  { key: 'status', label: 'Status', sortable: true },
-  { key: 'scheduled', label: 'Scheduled', sortable: true },
-  { key: 'engagement', label: 'Engagement', sortable: true },
-  { key: 'author', label: 'Author', sortable: true },
-]
+  { key: 'title', header: 'Title', sortable: true },
+  { key: 'platform', header: 'Platform', sortable: true },
+  { key: 'status', header: 'Status', sortable: true },
+  { key: 'scheduled', header: 'Scheduled', sortable: true },
+  { key: 'engagement', header: 'Engagement', sortable: true },
+  { key: 'author', header: 'Author', sortable: true },
+] as const
 
 export default function ContentPlannerPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)

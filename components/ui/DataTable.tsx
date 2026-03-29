@@ -13,12 +13,12 @@ interface Column<T> {
 
 interface DataTableProps<T> {
   data: T[]
-  columns: Column<T>[]
+  columns: readonly Column<T>[]
   onRowClick?: (row: T) => void
   emptyMessage?: string
 }
 
-export function DataTable<T extends { id: string }>({ 
+export function DataTable<T extends { id: string | number }>({ 
   data, 
   columns, 
   onRowClick,
@@ -29,7 +29,7 @@ export function DataTable<T extends { id: string }>({
 
   const handleSort = (key: keyof T) => {
     if (sortKey === key) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' 'asc')
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
       setSortKey(key)
       setSortDirection('asc')

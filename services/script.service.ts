@@ -1,6 +1,13 @@
 import { prisma } from '@/lib/prisma';
 import type { Script } from '@prisma/client';
 
+export interface UpdateScriptRequest {
+  scriptText?: string;
+  hooks?: string[];
+  cta?: string | null;
+  metadata?: any;
+}
+
 export const scriptService = {
   generate: async (data: {
     contentId: string;
@@ -10,8 +17,7 @@ export const scriptService = {
   }) => {
     // AI generation placeholder - in production, call AI service
     const generatedScript = {
-      title: `Generated ${data.type} for ${data.platform}`,
-      content: `# ${data.type}\n\nThis is a placeholder AI-generated script for ${data.platform}.\n\nTone: ${data.tone}\n\n## Introduction\n\nStart with an engaging hook...\n\n## Key Points\n\n1. Point 1\n2. Point 2\n3. Point 3\n\n## Call to Action\n\nEnd with a clear call to action.`,
+      scriptText: `# ${data.type}\n\nThis is a placeholder AI-generated script for ${data.platform}.\n\nTone: ${data.tone}\n\n## Introduction\n\nStart with an engaging hook...\n\n## Key Points\n\n1. Point 1\n2. Point 2\n3. Point 3\n\n## Call to Action\n\nEnd with a clear call to action.`,
       metadata: {
         platform: data.platform,
         tone: data.tone,
@@ -23,24 +29,25 @@ export const scriptService = {
     return prisma.script.create({
       data: {
         contentId: data.contentId,
-        title: generatedScript.title,
-        content: generatedScript.content,
-        metadata: generatedScript.metadata
+        scriptText: generatedScript.scriptText,
+        metadata: generatedScript.metadata as any
       }
     });
   },
 
   save: async (data: {
     contentId: string;
-    title: string;
-    content: string;
+    scriptText: string;
+    hooks?: string[];
+    cta?: string;
     metadata?: Record<string, any>;
   }) => {
     return prisma.script.create({
       data: {
         contentId: data.contentId,
-        title: data.title,
-        content: data.content,
+        scriptText: data.scriptText,
+        hooks: data.hooks || [],
+        cta: data.cta || null,
         metadata: data.metadata || {}
       }
     });
@@ -60,7 +67,7 @@ export const scriptService = {
     });
   },
 
-  update: async (id: string, data: Partial<Script>) => {
+  update: async (id: string, data: UpdateScriptRequest) => {
     return prisma.script.update({
       where: { id },
       data

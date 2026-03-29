@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import type { FreelanceJob, Proposal, ProposalStatus, JobStatus } from '@prisma/client';
+import { FreelanceJob, Proposal, ProposalStatus, JobStatus } from '@prisma/client';
 
 export const freelanceService = {
   saveJob: async (data: {
@@ -16,24 +16,10 @@ export const freelanceService = {
         title: data.title,
         description: data.description,
         url: data.url,
-        budget: data.budget,
-        deadline: data.deadline,
-        status: 'OPEN'
+        budget: data.budget || null,
+        deadline: data.deadline || null,
+        status: JobStatus.OPEN
       }
-    });
-  },
-
-  getByUserId: async (userId: string, filters?: {
-    status?: JobStatus;
-    platform?: string;
-  }) => {
-    return prisma.freelanceJob.findMany({
-      where: {
-        userId,
-        ...(filters?.status && { status: filters.status }),
-        ...(filters?.platform && { platform: filters.platform })
-      },
-      orderBy: { createdAt: 'desc' }
     });
   },
 
@@ -126,9 +112,9 @@ Looking forward to working with you!
     return prisma.proposal.create({
       data: {
         jobId: data.jobId,
-        userId: data.userId,
+        userId: data.userId || null,
         content: data.content,
-        status: 'DRAFT',
+        status: ProposalStatus.DRAFT,
         metadata: data.metadata || {}
       }
     });
@@ -164,7 +150,7 @@ Looking forward to working with you!
   updateProposalStatus: async (proposalId: string, status: ProposalStatus) => {
     const updateData: any = { status };
     
-    if (status === 'SUBMITTED') {
+    if (status === ProposalStatus.SUBMITTED) {
       updateData.submittedAt = new Date();
     }
     
@@ -178,6 +164,25 @@ Looking forward to working with you!
     return prisma.freelanceJob.update({
       where: { id: jobId },
       data: { status }
+    });
+  },
+
+  updateJob: async (jobId: string, data: {
+    title?: string;
+    description?: string;
+    budget?: string;
+    deadline?: Date;
+    status?: JobStatus;
+  }) => {
+    return prisma.freelanceJob.update({
+      where: { id: jobId },
+      data
+    });
+  },
+
+  deleteJob: async (jobId: string) => {
+    return prisma.freelanceJob.delete({
+      where: { id: jobId }
     });
   }
 };

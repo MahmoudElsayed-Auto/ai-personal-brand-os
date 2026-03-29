@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
 
     const task = await agentService.triggerTask({
       userId: body.userId,
-      type: body.type,
-      input: body.input || {}
+      agentType: body.type,
+      input: JSON.stringify(body.input || {})
     })
 
     return NextResponse.json(task, { status: 201 })

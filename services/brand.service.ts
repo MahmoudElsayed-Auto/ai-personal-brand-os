@@ -1,75 +1,46 @@
 import { prisma } from '@/lib/prisma';
-import type { Brand, BrandVoice, ContentPillar } from '@prisma/client';
+import type { BrandProfile, CreateBrandProfileRequest, UpdateBrandProfileRequest } from '@/types/brand';
 
 export const brandService = {
-  create: async (data: {
-    name: string;
-    mission: string;
-    vision: string;
-    values: string[];
-    userId: string;
-  }) => {
-    return prisma.brand.create({
+  create: async (data: CreateBrandProfileRequest & { userId: string }) => {
+    return prisma.brandProfile.create({
       data: {
-        name: data.name,
-        mission: data.mission,
-        vision: data.vision,
-        values: data.values,
-        userId: data.userId
+        userId: data.userId,
+        brandName: data.brandName,
+        brandVoice: data.brandVoice || null,
+        targetAudience: data.targetAudience || null,
+        brandValues: data.brandValues || null,
+        visualIdentity: data.visualIdentity || null,
+        positioning: data.positioning || null,
+        keywords: data.keywords || [],
       }
     });
   },
 
   getByUserId: async (userId: string) => {
-    return prisma.brand.findFirst({
+    return prisma.brandProfile.findFirst({
       where: { userId },
-      include: {
-        voices: true,
-        contentPillars: true
-      }
     });
   },
 
-  update: async (id: string, data: Partial<Brand>) => {
-    return prisma.brand.update({
+  update: async (id: string, data: UpdateBrandProfileRequest) => {
+    return prisma.brandProfile.update({
       where: { id },
-      data
+      data: {
+        brandName: data.brandName,
+        brandVoice: data.brandVoice,
+        targetAudience: data.targetAudience,
+        brandValues: data.brandValues,
+        visualIdentity: data.visualIdentity,
+        positioning: data.positioning,
+        keywords: data.keywords,
+      }
     });
   },
 
   delete: async (id: string) => {
-    return prisma.brand.delete({
+    return prisma.brandProfile.delete({
       where: { id }
     });
   },
-
-  createVoice: async (data: {
-    name: string;
-    traits: string[];
-    examples: string[];
-    brandId: string;
-  }) => {
-    return prisma.brandVoice.create({
-      data: {
-        name: data.name,
-        traits: data.traits,
-        examples: data.examples,
-        brandId: data.brandId
-      }
-    });
-  },
-
-  createContentPillar: async (data: {
-    name: string;
-    description: string;
-    brandId: string;
-  }) => {
-    return prisma.contentPillar.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        brandId: data.brandId
-      }
-    });
-  }
 };

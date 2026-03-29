@@ -1,11 +1,20 @@
 import { prisma } from '@/lib/prisma';
-import type { Schedule, ScheduleStatus } from '@prisma/client';
+import type { Schedule } from '@prisma/client';
+import { ScheduleStatus, Platform } from '@prisma/client';
+
+export interface UpdateScheduleRequest {
+  scheduledAt?: Date;
+  platform?: Platform;
+  status?: ScheduleStatus;
+  publishedUrl?: string | null;
+  metadata?: Record<string, any>;
+}
 
 export const scheduleService = {
   create: async (data: {
     contentId: string;
     scheduledAt: Date;
-    platform: string;
+    platform: Platform;
     metadata?: Record<string, any>;
   }) => {
     return prisma.schedule.create({
@@ -13,7 +22,7 @@ export const scheduleService = {
         contentId: data.contentId,
         scheduledAt: data.scheduledAt,
         platform: data.platform,
-        status: 'SCHEDULED',
+        status: ScheduleStatus.SCHEDULED,
         metadata: data.metadata || {}
       }
     });
@@ -21,7 +30,7 @@ export const scheduleService = {
 
   getByUserId: async (userId: string, filters?: {
     status?: ScheduleStatus;
-    platform?: string;
+    platform?: Platform;
     startDate?: Date;
     endDate?: Date;
   }) => {
@@ -45,7 +54,14 @@ export const scheduleService = {
     });
   },
 
-  update: async (id: string, data: Partial<Schedule>) => {
+  getById: async (id: string) => {
+    return prisma.schedule.findUnique({
+      where: { id },
+      include: { content: true }
+    });
+  },
+
+  update: async (id: string, data: UpdateScheduleRequest) => {
     return prisma.schedule.update({
       where: { id },
       data
@@ -69,7 +85,7 @@ export const scheduleService = {
     return prisma.schedule.findMany({
       where: {
         content: { userId },
-        status: 'SCHEDULED',
+        status: ScheduleStatus.SCHEDULED,
         scheduledAt: { gte: new Date() }
       },
       include: { content: true },

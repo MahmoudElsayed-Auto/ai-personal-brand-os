@@ -5,14 +5,20 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    if (!body.contentId || !body.scriptType || !body.content) {
+    if (!body.contentId || !body.scriptText) {
       return NextResponse.json(
-        { error: 'contentId, scriptType, and content are required' },
+        { error: 'contentId and scriptText are required' },
         { status: 400 }
       )
     }
 
-    const script = await scriptService.saveScript(body)
+    const script = await scriptService.save({
+      contentId: body.contentId,
+      scriptText: body.scriptText,
+      hooks: body.hooks,
+      cta: body.cta,
+      metadata: body.metadata
+    })
     return NextResponse.json(script, { status: 201 })
   } catch (error) {
     console.error('Error saving script:', error)
