@@ -14,18 +14,22 @@ export default function LoginPage() {
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
+    console.log('[LOGIN] SUBMIT FIRED')
     e.preventDefault()
     e.stopPropagation()
 
-    console.log('Form prevented successfully')
+    console.log('[LOGIN] PREVENT DEFAULT CALLED')
 
     try {
-      await authService.signIn(email, password)
-      console.log('Login successful')
+      console.log('[LOGIN] HANDLE LOGIN START')
+      const result = await authService.signIn(email, password)
+      console.log('[LOGIN] LOGIN SUCCESS', { user: result.user?.id })
 
-      window.location.assign('/dashboard')
+      console.log('[LOGIN] REDIRECT CALLED via router.push and router.refresh')
+      router.push('/dashboard')
+      router.refresh()
     } catch (err) {
-      console.error(err)
+      console.error('[LOGIN] ERROR:', err)
       setError(err instanceof Error ? err.message : 'Failed to login')
     }
   }

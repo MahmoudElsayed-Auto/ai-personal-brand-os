@@ -20,6 +20,7 @@ export default function SignUpPage() {
     try {
       await authService.signUp(email, password, name)
       router.push('/dashboard')
+      router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to sign up')
     }
@@ -27,14 +28,42 @@ export default function SignUpPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <form onSubmit={handleSignUp} className="w-full max-w-sm space-y-4 p-6 bg-card border rounded-lg">
+      <form
+        onSubmit={handleSignUp}
+        className="w-full max-w-sm space-y-4 p-6 bg-card border rounded-lg"
+      >
         <h1 className="text-2xl font-bold">Sign Up</h1>
         {error && <p className="text-red-500 text-sm">{error}</p>}
-        <Input type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} required />
-        <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <Button type="submit" className="w-full">Sign Up</Button>
-        <p className="text-sm text-center">Already have an account? <Link href="/auth/login" className="text-blue-500 hover:underline">Log in</Link></p>
+        <Input
+          type="text"
+          placeholder="Full Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <Input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <Input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <Button type="submit" className="w-full">
+          Sign Up
+        </Button>
+        <p className="text-sm text-center">
+          Already have an account?{' '}
+          <Link href="/auth/login" className="text-blue-500 hover:underline">
+            Log in
+          </Link>
+        </p>
       </form>
     </div>
   )
