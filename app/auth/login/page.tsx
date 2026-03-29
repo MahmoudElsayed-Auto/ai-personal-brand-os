@@ -15,20 +15,18 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+
+    console.log('Login attempt started')
+
     try {
       await authService.signIn(email, password)
 
-      console.log('Redirect triggered')
-      router.push('/dashboard')
+      console.log('Login successful, redirecting')
 
-      // Fallback if router.push fails to trigger navigation
-      setTimeout(() => {
-        window.location.href = '/dashboard'
-      }, 500)
-    } catch (err: any) {
-      console.error('Login error:', err)
-      setError(err.message || 'Failed to login')
+      router.push('/dashboard')
+    } catch (error) {
+      console.error('Login error:', error)
+      setError(error instanceof Error ? error.message : 'Failed to login')
     }
   }
 
