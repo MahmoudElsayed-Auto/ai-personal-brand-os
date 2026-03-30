@@ -1,128 +1,94 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Briefcase, DollarSign, Clock, TrendingUp, Search, Filter, Sparkles, Copy, Download, Send } from 'lucide-react'
-import { useAppStore } from '@/lib/store'
+import { Briefcase, DollarSign, Clock, TrendingUp, Search, Sparkles, Copy, Send, Check } from 'lucide-react'
 import { KPICard } from '@/components/ui/KPICard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/Modal'
 
-interface FreelanceJob {
-  id: string
-  title: string
-  client: string
-  budget: number
-  status: 'open' | 'in_progress' | 'completed' | 'closed'
-  deadline: string
-  description: string
-  skills: string[]
-}
-
-const mockJobs: FreelanceJob[] = [
-  {
-    id: '1',
-    title: 'AI Content Writer Needed',
-    client: 'TechStartup Inc.',
-    budget: 2500,
-    status: 'open',
-    deadline: '2025-01-30',
-    description: 'Need an experienced AI content writer for blog posts and social media content.',
-    skills: ['AI', 'Content Writing', 'SEO'],
-  },
-  {
-    id: '2',
-    title: 'Personal Brand Coach',
-    client: 'Marketing Agency',
-    budget: 1800,
-    status: 'in_progress',
-    deadline: '2025-02-15',
-    description: 'Looking for someone to help executives build their personal brand on LinkedIn.',
-    skills: ['Personal Branding', 'LinkedIn', 'Coaching'],
-  },
-  {
-    id: '3',
-    title: 'YouTube Script Writer',
-    client: 'Content Creator',
-    budget: 500,
-    status: 'completed',
-    deadline: '2025-01-20',
-    description: 'Need scripts for 5 YouTube videos about AI tools and productivity.',
-    skills: ['YouTube', 'Script Writing', 'Video'],
-  },
-  {
-    id: '4',
-    title: 'Social Media Manager',
-    client: 'E-commerce Brand',
-    budget: 3200,
-    status: 'open',
-    deadline: '2025-02-28',
-    description: 'Manage social media accounts for a growing e-commerce brand. Focus on engagement.',
-    skills: ['Social Media', 'Marketing', 'Engagement'],
-  },
-]
-
-const kpiData = [
-  { title: 'Total Earnings', value: '$12,450', change: '+15%', trend: 'up', icon: DollarSign },
-  { title: 'Active Projects', value: '3', change: '+1', trend: 'up', icon: Briefcase },
-  { title: 'Hours This Week', value: '24', change: '-5%', trend: 'down', icon: Clock },
-  { title: 'Client Rating', value: '4.9/5', change: '+0.2', trend: 'up', icon: TrendingUp },
-]
-
-function FreelanceDashboardPage() {
-  const { darkMode } = useAppStore()
-  const [jobs, setJobs] = useState<FreelanceJob[]>(mockJobs)
+export default function FreelanceDashboardPage() {
+  const [jobs, setJobs] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedJob, setSelectedJob] = useState<FreelanceJob | null>(null)
+  const [selectedJob, setSelectedJob] = useState<any | null>(null)
+  
   const [proposal, setProposal] = useState('')
+  const [proposalId, setProposalId] = useState<string | null>(null)
+  const [proposalStatus, setProposalStatus] = useState<string>('DRAFT') // DRAFT, ACCEPTED, SUBMITTED
   const [isGenerating, setIsGenerating] = useState(false)
+
+  const fetchJobs = async () => {
+    try {
+      const res = await fetch('/api/freelance/jobs')
+      if (res.ok) {
+        const data = await res.json()
+        setJobs(data)
+      }
+    } catch (err) {
+      console.error('Error fetching jobs:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchJobs()
+  }, [])
 
   const filteredJobs = jobs.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
+      (job.description && job.description.toLowerCase().includes(searchQuery.toLowerCase()))
     const matchesStatus = statusFilter === 'all' || job.status === statusFilter
     return matchesSearch && matchesStatus
   })
 
-  const handleGenerateProposal = async (job: FreelanceJob) => {
+  const handleGenerateProposal = async (job: any) => {
     setSelectedJob(job)
     setIsModalOpen(true)
     setIsGenerating(true)
+    setProposal('')
+    setProposalStatus('DRAFT')
+    setProposalId(null)
 
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    try {
+      const res = await fetch('/api/freelance/proposal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: job.id,
+          jobTitle: job.title,
+          jobDescription: job.description,
+          budget: job.budget,
+        })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setProposal(data.content)
+        setProposalId(data.id)
+        setProposalStatus(data.status)
+      }
+    } catch (err) {
+      console.error('Error generating proposal:', err)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
-    const generatedProposal = `Dear ${job.client},
-
-I'm excited to apply for the "${job.title}" position. With my extensive experience in ${job.skills.slice(0, 2).join(', ')}, and a proven track record of delivering high-quality work, I'm confident I can help you achieve your goals.
-
-**Why I'm a great fit:**
-
-✓ Successfully completed 15+ similar projects
-✓ 4.9/5 client rating with 100% satisfaction rate
-✓ Available ${job.budget > 2000 ? '40+ hours/week' : '20+ hours/week'}
-✓ Quick turnaround time with attention to detail
-
-**My Approach:**
-
-1. Initial consultation to understand your specific requirements
-2. Draft submission within 24-48 hours
-3. Revisions based on feedback until complete satisfaction
-4. Final delivery with all source files and documentation
-
-I'm available to start immediately and can deliver within your ${job.deadline ? `deadline of ${job.deadline}` : 'timeline'}. 
-
-Looking forward to contributing to your success!
-
-Best regards,
-[Your Name]
-Personal Brand Expert | AI Content Strategist`
-
-    setProposal(generatedProposal)
-    setIsGenerating(false)
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!proposalId) return;
+    try {
+      const res = await fetch('/api/freelance/proposal', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposalId, status: newStatus })
+      })
+      if (res.ok) {
+        setProposalStatus(newStatus)
+      }
+    } catch (err) {
+      console.error('Error updating status:', err)
+    }
   }
 
   const handleCopyProposal = () => {
@@ -145,19 +111,6 @@ Personal Brand Expert | AI Content Strategist`
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {kpiData.map((kpi, index) => (
-            <motion.div
-              key={kpi.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <KPICard {...kpi} />
-            </motion.div>
-          ))}
-        </div>
-
         <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -175,16 +128,6 @@ Personal Brand Expert | AI Content Strategist`
                     className="pl-9 pr-4 py-2 w-48 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Status</option>
-                  <option value="open">Open</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                </select>
               </div>
             </div>
           </CardHeader>
@@ -193,7 +136,7 @@ Personal Brand Expert | AI Content Strategist`
               <AnimatePresence>
                 {filteredJobs.length === 0 ? (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    No jobs found matching your criteria
+                    No jobs found matching your criteria. Try adding some via API or seed.
                   </div>
                 ) : (
                   filteredJobs.map((job, idx) => (
@@ -211,37 +154,20 @@ Personal Brand Expert | AI Content Strategist`
                             <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                               {job.title}
                             </h3>
-                            <span className={`
-                              text-xs px-2 py-0.5 rounded-full
-                              ${job.status === 'open' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                job.status === 'in_progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                job.status === 'completed' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
-                              }
-                            `}>
-                              {job.status.replace('_', ' ')}
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                              {job.status}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                            {job.client} • Deadline: {job.deadline}
+                            Platform: {job.platform}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-500 mb-3">
-                            {job.description.substring(0, 100)}...
+                            {job.description.substring(0, 150)}...
                           </p>
-                          <div className="flex flex-wrap gap-2">
-                            {job.skills.map((skill, i) => (
-                              <span
-                                key={i}
-                                className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full"
-                              >
-                                {skill}
-                              </span>
-                            ))}
-                          </div>
                         </div>
-                        <div className="text-right ml-4">
+                        <div className="text-right ml-4 flex flex-col items-end">
                           <div className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                            ${job.budget.toLocaleString()}
+                            {job.budget ? `$${job.budget}` : 'Variable'}
                           </div>
                           <Button
                             size="sm"
@@ -269,9 +195,6 @@ Personal Brand Expert | AI Content Strategist`
               <p className="text-sm text-blue-700 dark:text-blue-300">
                 <strong>Job:</strong> {selectedJob.title}
               </p>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                <strong>Budget:</strong> ${selectedJob.budget.toLocaleString()}
-              </p>
             </div>
           )}
 
@@ -287,31 +210,49 @@ Personal Brand Expert | AI Content Strategist`
             </div>
           ) : (
             <>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-semibold text-slate-500">Status: {proposalStatus}</span>
+              </div>
               <textarea
                 value={proposal}
                 onChange={(e) => setProposal(e.target.value)}
                 className="w-full h-64 p-4 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                 placeholder="Your generated proposal will appear here..."
+                disabled={proposalStatus !== 'DRAFT'}
               />
 
-              <div className="flex gap-3 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={handleCopyProposal}
-                >
+              <div className="flex gap-3 justify-end mt-4">
+                <Button variant="outline" onClick={handleCopyProposal}>
                   <Copy className="w-4 h-4 mr-2" />
                   Copy
                 </Button>
-                <Button
-                  variant="outline"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Proposal
-                </Button>
+                
+                {proposalStatus === 'DRAFT' && (
+                  <Button 
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => handleUpdateStatus('ACCEPTED')}
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Approve
+                  </Button>
+                )}
+
+                {proposalStatus === 'ACCEPTED' && (
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => handleUpdateStatus('SUBMITTED')}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send (Auto-Apply)
+                  </Button>
+                )}
+                
+                {proposalStatus === 'SUBMITTED' && (
+                  <Button disabled className="bg-gray-400 text-white cursor-not-allowed">
+                    <Send className="w-4 h-4 mr-2" />
+                    Sent
+                  </Button>
+                )}
               </div>
             </>
           )}
@@ -320,5 +261,3 @@ Personal Brand Expert | AI Content Strategist`
     </div>
   )
 }
-
-export default FreelanceDashboardPage
